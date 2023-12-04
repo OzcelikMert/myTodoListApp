@@ -1,0 +1,39 @@
+name: my_todo_list_app
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.15.1 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.2
+  dropdown_search: ^5.0.6
+  sqflite: ^2.2.8
+  path_provider: ^2.0.14
+  intl: ^0.18.1
+  flutter_sequence_animation: ^4.0.0
+  permission_handler: ^10.2.0
+  device_info: ^2.0.3
+  file_picker: ^5.2.11
+  provider: ^6.0.5
+  flutter_typeahead: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/images/
+    - assets/audios/
+    - assets/json/
