@@ -1,11 +1,11 @@
-import 'package:my_todo_list_app/config/db/tables/languages.dart';
-import 'package:my_todo_list_app/config/db/tables/words.dart';
+import 'package:my_todo_list_app/config/db/tables/checkedItem.dart';
+import 'package:my_todo_list_app/config/db/tables/item.dart';
 import 'package:my_todo_list_app/lib/file.lib.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DBConn {
-  static const _databaseName = 'myLanguageApp.db';
+  static const _databaseName = 'myTodoListApp.db';
   static const _databaseVersion = 14;
 
   DBConn._privateConstructor();
@@ -25,18 +25,18 @@ class DBConn {
   }
 
   Future _onCreate(Database db, int version) async {
-    var tableLanguages = DBTableLanguages(db);
+    var tableLanguages = DBTableItems(db);
     tableLanguages.onCreate();
 
-    var tableWords = DBTableWords(db);
+    var tableWords = DBTableCheckedItems(db);
     tableWords.onCreate();
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    var tableLanguages = DBTableLanguages(db);
+    var tableLanguages = DBTableItems(db);
     tableLanguages.onUpgrade();
 
-    var tableWords = DBTableWords(db);
+    var tableWords = DBTableCheckedItems(db);
     tableWords.onUpgrade();
   }
 }
