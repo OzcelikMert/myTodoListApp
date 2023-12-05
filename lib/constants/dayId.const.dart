@@ -6,10 +6,11 @@ class DayIdConst {
   static const friday = 5;
   static const saturday = 6;
   static const sunday = 7;
+  static const all = 8;
 
-  static getIdName(int type) {
+  static getIdName(int id) {
     String name = "";
-    switch(type) {
+    switch(id) {
       case DayIdConst.monday: name = "Pazartesi"; break;
       case DayIdConst.tuesday: name = "Salı"; break;
       case DayIdConst.wednesday: name = "Çarşamba"; break;
@@ -17,6 +18,7 @@ class DayIdConst {
       case DayIdConst.friday: name = "Cuma"; break;
       case DayIdConst.saturday: name = "Cumartesi"; break;
       case DayIdConst.sunday: name = "Pazar"; break;
+      case DayIdConst.all: name = "Hepsi"; break;
     }
     return name;
   }

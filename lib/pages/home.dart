@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:my_todo_list_app/components/elements/dataTable/index.dart';
-import 'package:my_todo_list_app/config/db/tables/languages.dart';
 import 'package:my_todo_list_app/constants/page.const.dart';
 import 'package:my_todo_list_app/constants/theme.const.dart';
 import 'package:my_todo_list_app/lib/dialog.lib.dart';

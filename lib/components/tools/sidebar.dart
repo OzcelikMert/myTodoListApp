@@ -3,16 +3,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:my_todo_list_app/config/db/tables/words.dart';
 import 'package:my_todo_list_app/constants/page.const.dart';
 import 'package:my_todo_list_app/constants/theme.const.dart';
-import 'package:my_todo_list_app/constants/wordType.const.dart';
 import 'package:my_todo_list_app/lib/dialog.lib.dart';
 import 'package:my_todo_list_app/lib/file.lib.dart';
 import 'package:my_todo_list_app/lib/provider.lib.dart';
 import 'package:my_todo_list_app/lib/route.lib.dart';
 import 'package:my_todo_list_app/models/components/elements/dialog/options.model.dart';
-import 'package:my_todo_list_app/models/providers/language.provider.model.dart';
+import 'package:my_todo_list_app/models/providers/page.provider.model.dart';
 import 'package:my_todo_list_app/models/services/language.model.dart';
 import 'package:my_todo_list_app/models/services/word.model.dart';
 import 'package:my_todo_list_app/services/language.service.dart';
@@ -188,57 +186,46 @@ class _ComponentSideBarState extends State<ComponentSideBar> {
         padding: EdgeInsets.zero,
         children: <Widget>[
           DrawerHeader(
-            child: Center(child: Consumer<LanguageProviderModel>(
-              builder: (context, model, child) {
-                return Text(
-                    model.selectedLanguage.languageName);
-              },
-            )),
             decoration: BoxDecoration(
               color: ThemeConst.colors.primary,
             ),
+            child: Center(child: Consumer<PageProviderModel>(
+              builder: (context, model, child) {
+                return Text(model.title);
+              },
+            )),
           ),
           Container(
-            color: getActiveBG(routeName, PageConst.routeNames.studyPlan),
+            color: getActiveBG(routeName, PageConst.routeNames.home),
             child: ListTile(
-              leading: const Icon(Icons.workspace_premium),
-              title: const Text('Study Plan'),
+              leading: const Icon(Icons.playlist_add_check),
+              title: const Text('Bugün Yapılacaklar'),
               onTap: () async {
-                await RouteLib.change(context: context, target: PageConst.routeNames.studyPlan);
+                await RouteLib.change(context: context, target: PageConst.routeNames.home);
               },
             ),
           ),
           Container(
-            color: getActiveBG(routeName, PageConst.routeNames.wordAdd),
+            color: getActiveBG(routeName, PageConst.routeNames.list),
             child: ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text('Add New Word'),
+              leading: const Icon(Icons.playlist_add),
+              title: const Text('Yapılacak Ekle'),
               onTap: () async {
-                await RouteLib.change(context: context, target: PageConst.routeNames.wordAdd);
-              },
-            ),
-          ),
-          Container(
-            color: getActiveBG(routeName, PageConst.routeNames.wordList),
-            child: ListTile(
-              leading: const Icon(Icons.list_alt),
-              title: const Text('List Words'),
-              onTap: () async {
-                await RouteLib.change(context: context, target: PageConst.routeNames.wordList);
+                await RouteLib.change(context: context, target: PageConst.routeNames.list);
               },
             ),
           ),
           Container(
             child: ListTile(
               leading: const Icon(Icons.download),
-              title: const Text('Export Words'),
+              title: const Text('Listeyi Dışa Aktar'),
               onTap: () => onClickExport(),
             ),
           ),
           Container(
             child: ListTile(
               leading: const Icon(Icons.upload),
-              title: const Text('Import Words'),
+              title: const Text('Listeyi İçe Aktar'),
               onTap: () => onClickImport(),
             ),
           ),
@@ -246,18 +233,10 @@ class _ComponentSideBarState extends State<ComponentSideBar> {
             color: getActiveBG(routeName, PageConst.routeNames.settings),
             child: ListTile(
               leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
+              title: const Text('Ayarlar'),
               onTap: () async {
                 await RouteLib.change(context: context, target: PageConst.routeNames.settings);
               },
-            ),
-          ),
-          Container(
-            color: getActiveBG(routeName, PageConst.routeNames.home),
-            child: ListTile(
-              leading: const Icon(Icons.keyboard_return),
-              title: const Text('Return Home'),
-              onTap: () => onClickReturnHome(),
             ),
           ),
         ],
