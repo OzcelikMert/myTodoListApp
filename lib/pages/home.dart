@@ -1,20 +1,25 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:my_todo_list_app/components/elements/dataTable/index.dart';
+import 'package:my_todo_list_app/config/db/tables/checkedItem.dart';
+import 'package:my_todo_list_app/config/db/tables/item.dart';
+import 'package:my_todo_list_app/constants/dayId.const.dart';
 import 'package:my_todo_list_app/constants/page.const.dart';
 import 'package:my_todo_list_app/constants/theme.const.dart';
 import 'package:my_todo_list_app/lib/dialog.lib.dart';
 import 'package:my_todo_list_app/lib/provider.lib.dart';
 import 'package:my_todo_list_app/lib/route.lib.dart';
-import 'package:my_todo_list_app/lib/voices.lib.dart';
 import 'package:my_todo_list_app/models/components/elements/dataTable/dataCell.model.dart';
 import 'package:my_todo_list_app/models/components/elements/dataTable/dataColumn.model.dart';
 import 'package:my_todo_list_app/models/components/elements/dialog/options.model.dart';
 import 'package:my_todo_list_app/models/providers/page.provider.model.dart';
-import 'package:my_todo_list_app/models/services/language.model.dart';
-import 'package:my_todo_list_app/models/services/word.model.dart';
+import 'package:my_todo_list_app/models/services/checkedItem.model.dart';
+import 'package:my_todo_list_app/models/services/item.model.dart';
 import 'package:my_todo_list_app/myLib/variable/array.dart';
-import 'package:my_todo_list_app/services/language.service.dart';
-import 'package:my_todo_list_app/services/word.service.dart';
+import 'package:my_todo_list_app/services/checkedItem.service.dart';
+import 'package:my_todo_list_app/services/item.service.dart';
 
 import '../components/elements/button.dart';
 
@@ -28,7 +33,10 @@ class PageHome extends StatefulWidget {
 }
 
 class _PageHomeState extends State<PageHome> {
-  late List<LanguageGetResultModel> _stateLanguages = [];
+  late List<ItemGetResultModel> _stateItems = [];
+  late List<CheckedItemGetResultModel> _stateCheckedItems = [];
+  late DateTime _stateDate = DateTime.now().toLocal();
+  late bool _stateIsDateNow = true;
 
   @override
   void initState() {
@@ -40,105 +48,99 @@ class _PageHomeState extends State<PageHome> {
 
   _pageInit() async {
     final pageProviderModel = ProviderLib.get<PageProviderModel>(context);
-    pageProviderModel.setTitle("Select Language");
+    pageProviderModel.setTitle("Yapılacaklar Listesi");
 
-    final ttsProviderModel = ProviderLib.get<TTSProviderModel>(context);
-    if (ttsProviderModel.voices.isEmpty) {
-      await ttsProviderModel
-          .setVoices(await VoicesLib.getVoices());
-    }
-
-    var languages = await LanguageService.get(LanguageGetParamModel());
-
-    var findLanguage = MyLibArray.findSingle(array: languages, key: DBTableLanguages.columnIsSelected, value: 1);
-    if (findLanguage != null) {
-      onClickSelect(findLanguage);
-      return;
-    }
-
-    setState(() {
-      _stateLanguages = languages;
-    });
+    await getItems();
+    await getCheckedItems();
 
     pageProviderModel.setIsLoading(false);
   }
 
-  void onClickAdd() async {
-    var isAdded = await RouteLib.change(
-        context: context,
-        target: PageConst.routeNames.languageAdd,
-        safeHistory: true);
-    if (isAdded == true) {
+  Future<void> getItems() async {
+    List<ItemGetResultModel> items = await ItemService.get(ItemGetParamModel());
+
+    setState(() {
+      _stateItems = MyLibArray.sort(
+          array: items,
+          key: DBTableItems.columnCreatedAt,
+          sortType: SortType.desc);
+    });
+  }
+
+  Future<void> getCheckedItems() async {
+    List<CheckedItemGetResultModel> checkedItems = await CheckedItemService.get(CheckedItemGetParamModel(checkedItemCreatedAt: _stateDate.toUtc().toLocal().toString()));
+
+    setState(() {
+      _stateCheckedItems = MyLibArray.sort(
+          array: checkedItems,
+          key: DBTableCheckedItems.columnCreatedAt,
+          sortType: SortType.desc);
+    });
+  }
+
+  void onClickAddNew() async {
+    await RouteLib.change(context: context, target: PageConst.routeNames.list);
+  }
+
+  void onClickChangeDate() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _stateDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      locale: window.locale
+    );
+
+    if (pickedDate != null) {
       await DialogLib.show(
-          context, ComponentDialogOptions(icon: ComponentDialogIcon.loading));
-      await _pageInit();
+          context,
+          ComponentDialogOptions(
+              content: "Güncelleniyor...", icon: ComponentDialogIcon.loading));
+      DateTime date = DateTime.now().toLocal();
+
+      setState(() {
+        _stateDate = pickedDate;
+        _stateIsDateNow = DateTime(date.year, date.month, date.day)
+            .isAtSameMomentAs(
+                DateTime(pickedDate.year, pickedDate.month, pickedDate.day));
+      });
+
+      await getCheckedItems();
+
       DialogLib.hide(context);
     }
   }
 
-  void onClickSelect(LanguageGetResultModel row) async {
-    final pageProviderModel = ProviderLib.get<PageProviderModel>(context);
-    final languageProviderModel =
-        ProviderLib.get<LanguageProviderModel>(context);
-
-    languageProviderModel.setSelectedLanguage(row);
-
-    int updateWord = 1;
-
-    if (!pageProviderModel.isLoading) {
-      await DialogLib.show(
-          context, ComponentDialogOptions(icon: ComponentDialogIcon.loading));
-      updateWord = await LanguageService.update(LanguageUpdateParamModel(
-          whereLanguageId: row.languageId,
-          languageIsSelected: 1), context);
-    }
-
-    if (updateWord > 0) {
-      await RouteLib.change(context: context, target: '/study/plan');
-    }
-  }
-
-  void onClickDelete(LanguageGetResultModel row) async {
-    DialogLib.show(
+  void onClickCheck(ItemGetResultModel row, bool isChecked) async {
+    await DialogLib.show(
         context,
         ComponentDialogOptions(
-            title: "Are you sure?",
-            content:
-                "Are you sure want to delete '${row.languageName}'?",
-            icon: ComponentDialogIcon.confirm,
-            showCancelButton: true,
-            onPressed: (bool isConfirm) async {
-              if (isConfirm) {
-                await DialogLib.show(
-                    context,
-                    ComponentDialogOptions(
-                        content: "Deleting...",
-                        icon: ComponentDialogIcon.loading));
-                var result = await LanguageService.delete(
-                    LanguageDeleteParamModel(
-                        languageId: row.languageId));
-                if (result > 0) {
-                  await WordService.delete(WordDeleteParamModel(
-                      wordLanguageId: row.languageId));
-                  setState(() {
-                    _stateLanguages = MyLibArray.findMulti(array: _stateLanguages, key: DBTableLanguages.columnId, value: row.languageId, isLike: false);
-                  });
-                  DialogLib.show(
-                      context,
-                      ComponentDialogOptions(
-                          content:
-                              "Success! You've deleted '${row.languageName}'",
-                          icon: ComponentDialogIcon.success));
-                } else {
-                  DialogLib.show(
-                      context,
-                      ComponentDialogOptions(
-                          content: "It couldn't delete!",
-                          icon: ComponentDialogIcon.error));
-                }
-                return false;
-              }
-            }));
+            content: "Güncelleniyor...", icon: ComponentDialogIcon.loading));
+
+    if (isChecked) {
+      int result = await CheckedItemService.add(
+          CheckedItemAddParamModel(checkedItemItemId: row.itemId));
+      if (result > 0) {
+        CheckedItemGetResultModel item = (await CheckedItemService.get(
+            CheckedItemGetParamModel(checkedItemId: result)))[0];
+        setState(() {
+          _stateCheckedItems = [item, ..._stateCheckedItems];
+        });
+      }
+    } else {
+      int result = await CheckedItemService.delete(
+          CheckedItemDeleteParamModel(checkedItemItemId: row.itemId));
+      if (result > 0) {
+        setState(() {
+          _stateCheckedItems = MyLibArray.findMulti(
+              array: _stateCheckedItems,
+              key: DBTableCheckedItems.columnItemId,
+              value: row.itemId,
+              isLike: false);
+        });
+      }
+    }
+    DialogLib.hide(context);
   }
 
   @override
@@ -146,58 +148,96 @@ class _PageHomeState extends State<PageHome> {
     final pageProviderModel =
         ProviderLib.get<PageProviderModel>(context, listen: true);
 
+    var itemList = _stateIsDateNow ? _stateItems.where((item) => item.itemIsDeleted == 0).toList() : _stateItems.where((item) => MyLibArray.findSingle(
+        array: _stateCheckedItems,
+        key: DBTableCheckedItems.columnItemId,
+        value: item.itemId) !=
+        null).toList();
+
+    itemList = itemList.where((item) => [DayIdConst.all, _stateDate.weekday].contains(item.itemDayId)).toList();
+
     return pageProviderModel.isLoading
         ? Container()
-        : Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                ComponentButton(
-                  onPressed: () => onClickAdd(),
-                  text: "Add New",
-                ),
-                Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
-                ComponentDataTable<LanguageGetResultModel>(
-                  data: _stateLanguages,
-                  columns: const [
-                    ComponentDataColumnModule(
-                      title: "Name",
-                      sortKeyName: DBTableLanguages.columnName,
-                      sortable: true,
-                    ),
-                    ComponentDataColumnModule(
-                      title: "Select",
-                    ),
-                    ComponentDataColumnModule(
-                      title: "Delete",
+        : Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                      child: ComponentButton(
+                    text: "Takvim",
+                    onPressed: () => onClickChangeDate(),
+                    bgColor: ThemeConst.colors.warning,
+                  )),
+                  Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
+                  Expanded(
+                      child: ComponentButton(
+                    text: "Yeni Ekle",
+                    onPressed: () => onClickAddNew(),
+                    bgColor: ThemeConst.colors.primary,
+                  )),
+                ],
+              ),
+              Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
+              Center(
+                  child: Text(DateFormat("yyyy-MM-dd").format(_stateDate),
+                      style: TextStyle(fontSize: ThemeConst.fontSizes.lg))),
+              Center(
+                  child: Text(DayIdConst.getIdText(_stateDate.weekday),
+                      style: TextStyle(fontSize: ThemeConst.fontSizes.md))),
+              Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
+              itemList.length == 0
+                  ? Center(
+                      child: Text("Yapılacak listesi hayallarim kadar boş 🙄.",
+                          style: TextStyle(fontSize: ThemeConst.fontSizes.md)))
+                  : ComponentDataTable<ItemGetResultModel>(
+                      data: itemList,
+                      selectedColor: ThemeConst.colors.info,
+                      isSearchable: false,
+                      bgColorRow: (row) {
+                        if (MyLibArray.findSingle(
+                                array: _stateCheckedItems,
+                                key: DBTableCheckedItems.columnItemId,
+                                value: row.itemId) !=
+                            null) {
+                          return ThemeConst.colors.success;
+                        }
+                        return null;
+                      },
+                      columns: const [
+                        ComponentDataColumnModule(
+                          title: "Yapıldı",
+                        ),
+                        ComponentDataColumnModule(
+                            title: "Metin", minWidth: 200),
+                      ],
+                      cells: [
+                        ComponentDataCellModule(
+                          child: (row) => Checkbox(
+                            checkColor: ThemeConst.colors.light,
+                            fillColor: MaterialStateProperty.all(
+                                ThemeConst.colors.primary),
+                            onChanged: !_stateIsDateNow
+                                ? null
+                                : (bool? value) =>
+                                    onClickCheck(row, value ?? false),
+                            value: MyLibArray.findSingle(
+                                    array: _stateCheckedItems,
+                                    key: DBTableCheckedItems.columnItemId,
+                                    value: row.itemId) !=
+                                null,
+                          ),
+                        ),
+                        ComponentDataCellModule(
+                          child: (row) => Container(
+                              constraints: BoxConstraints(minWidth: 200),
+                              child: Text(row.itemText)),
+                        ),
+                      ],
                     )
-                  ],
-                  cells: [
-                    ComponentDataCellModule(
-                      child: (row) =>
-                          Text(row.languageName.toString()),
-                    ),
-                    ComponentDataCellModule(
-                      child: (row) => ComponentButton(
-                        text: "Select",
-                        onPressed: () => onClickSelect(row),
-                        icon: Icons.check,
-                        buttonSize: ComponentButtonSize.sm,
-                      ),
-                    ),
-                    ComponentDataCellModule(
-                      child: (row) => ComponentButton(
-                        text: "Delete",
-                        bgColor: ThemeConst.colors.danger,
-                        onPressed: () => onClickDelete(row),
-                        icon: Icons.delete_forever,
-                        buttonSize: ComponentButtonSize.sm,
-                      ),
-                    )
-                  ],
-                )
-              ],
-            ),
+            ],
           );
   }
 }

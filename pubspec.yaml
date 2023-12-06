@@ -11,12 +11,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+      sdk: flutter
 
   cupertino_icons: ^1.0.2
   dropdown_search: ^5.0.6
   sqflite: ^2.2.8
   path_provider: ^2.0.14
-  intl: ^0.18.1
+  intl: ^0.17.0
   flutter_sequence_animation: ^4.0.0
   permission_handler: ^10.2.0
   device_info: ^2.0.3

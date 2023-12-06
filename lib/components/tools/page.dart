@@ -30,12 +30,8 @@ class _ComponentPageState extends State<ComponentPage> {
     final pageProviderModel =
         ProviderLib.get<PageProviderModel>(context, listen: true);
     String? routeName = ModalRoute.of(context)?.settings.name;
-    bool showBackButton = [
-      PageConst.routeNames.wordEdit,
-      PageConst.routeNames.studySettings,
-      PageConst.routeNames.languageAdd
-    ].contains(routeName);
-    bool hide = [PageConst.routeNames.study].contains(routeName);
+    bool showBackButton = [PageConst.routeNames.listDetail].contains(routeName);
+    bool hide = [].contains(routeName);
 
     return hide || pageProviderModel.isLoading
         ? null
@@ -66,9 +62,8 @@ class _ComponentPageState extends State<ComponentPage> {
     String? routeName = ModalRoute.of(context)?.settings.name;
 
     bool show = [
-      PageConst.routeNames.studyPlan,
-      PageConst.routeNames.wordList,
-      PageConst.routeNames.wordAdd,
+      PageConst.routeNames.home,
+      PageConst.routeNames.list,
       PageConst.routeNames.settings
     ].contains(routeName);
 

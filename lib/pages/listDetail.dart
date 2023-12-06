@@ -1,9 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:my_todo_list_app/components/elements/button.dart';
 import 'package:my_todo_list_app/components/elements/dataTable/index.dart';
 import 'package:my_todo_list_app/components/elements/form.dart';
 import 'package:my_todo_list_app/components/elements/iconButton.dart';
 import 'package:my_todo_list_app/config/db/tables/item.dart';
+import 'package:my_todo_list_app/constants/dayId.const.dart';
 import 'package:my_todo_list_app/constants/page.const.dart';
 import 'package:my_todo_list_app/constants/theme.const.dart';
 import 'package:my_todo_list_app/lib/dialog.lib.dart';
@@ -24,8 +25,8 @@ class PageListDetail extends StatefulWidget {
   PageListDetail({Key? key, required this.context}) : super(key: key) {
     var args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-    if (args != null && args[DBTableItems.columnId] != null) {
-      itemDayId = int.tryParse(args[DBTableItems.columnId].toString()) ?? 0;
+    if (args != null && args[DBTableItems.columnDayId] != null) {
+      itemDayId = int.tryParse(args[DBTableItems.columnDayId].toString()) ?? 0;
     }
   }
 
@@ -54,19 +55,15 @@ class _PageListDetailState extends State<PageListDetail> {
     }
 
     final pageProviderModel = ProviderLib.get<PageProviderModel>(context);
+    pageProviderModel.setTitle(
+        "${DayIdConst.getIdText(widget.itemDayId)} Yapılacaklar Listesi");
 
-    await setPageTitle(pageProviderModel);
-
-    await getDays();
+    await getItems();
 
     pageProviderModel.setIsLoading(false);
   }
 
-  Future<void> setPageTitle(PageProviderModel pageProviderModel) async {
-    pageProviderModel.setTitle("Todo Day List");
-  }
-
-  Future<void> getDays() async {
+  Future<void> getItems() async {
     List<ItemGetResultModel> items = await ItemService.get(ItemGetParamModel(
       itemDayId: widget.itemDayId,
       itemIsDeleted: 0,
@@ -87,7 +84,7 @@ class _PageListDetailState extends State<PageListDetail> {
     return null;
   }
 
-  void onClickUpdate(ItemGetResultModel row) async {
+  void onClickEdit(ItemGetResultModel row) async {
     DialogLib.show(
         context,
         ComponentDialogOptions(
@@ -96,6 +93,8 @@ class _PageListDetailState extends State<PageListDetail> {
             showCancelButton: true,
             content:
                 "'${row.itemText}' maddesini '${_controllerText.text}' olarak güncellemek istediğinden emin misin?",
+            cancelButtonText: "Hayır",
+            confirmButtonText: "Evet",
             onPressed: (bool isConfirm) async {
               if (isConfirm) {
                 await DialogLib.show(
@@ -104,15 +103,14 @@ class _PageListDetailState extends State<PageListDetail> {
                         content: "Güncelleniyor...",
                         icon: ComponentDialogIcon.loading));
                 int result = await ItemService.update(ItemUpdateParamModel(
-                    whereItemId: row.itemId,
-                    itemText: _controllerText.text));
+                    whereItemId: row.itemId, itemText: _controllerText.text));
                 if (result > 0) {
                   setState(() {
                     _stateItems = _stateItems.map((item) {
-                        if(item.itemId == row.itemId){
-                          item.itemText = _controllerText.text;
-                        }
-                        return item;
+                      if (item.itemId == row.itemId) {
+                        item.itemText = _controllerText.text;
+                      }
+                      return item;
                     }).toList();
                   });
                   DialogLib.show(
@@ -125,7 +123,8 @@ class _PageListDetailState extends State<PageListDetail> {
                   DialogLib.show(
                       context,
                       ComponentDialogOptions(
-                          content: "Bir sorun oluştu! Lütfen desteğe bildiriniz.!",
+                          content:
+                              "Bir sorun oluştu! Lütfen desteğe bildiriniz.!",
                           icon: ComponentDialogIcon.error));
                 }
                 return false;
@@ -133,41 +132,71 @@ class _PageListDetailState extends State<PageListDetail> {
             }));
   }
 
-  void onClickEdit(ItemGetResultModel row) async {
+  void onClickAdd() async {
+    await DialogLib.show(
+        context,
+        ComponentDialogOptions(
+            content: "Ekleniyor...", icon: ComponentDialogIcon.loading));
+    int result = await ItemService.add(ItemAddParamModel(
+        itemDayId: widget.itemDayId, itemText: _controllerText.text));
+    if (result > 0) {
+      ItemGetResultModel item =
+          (await ItemService.get(ItemGetParamModel(itemId: result)))[0];
+      setState(() {
+        _stateItems = [item, ..._stateItems];
+      });
+      _controllerText.text = "";
+      DialogLib.show(
+          context,
+          ComponentDialogOptions(
+              title: "İşlem Başarılı!",
+              content: "Başarı ile eklendi!",
+              icon: ComponentDialogIcon.success));
+    } else {
+      DialogLib.show(
+          context,
+          ComponentDialogOptions(
+              content: "Bir sorun oluştu! Lütfen desteğe bildiriniz.!",
+              icon: ComponentDialogIcon.error));
+    }
+  }
+
+  void onClickAddModal({ItemGetResultModel? row}) async {
+    _controllerText.text = row != null ? row.itemText : "";
     showModalBottomSheet<void>(
         context: context,
         builder: (BuildContext context) {
           return SizedBox(
-            height: 200,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text('Yapılacak Maddesi Düzenle'),
-                  Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
-                  ComponentForm(
-                      formKey: _formKey,
-                      onSubmit: () => onClickUpdate(row),
-                      submitButtonText: "Güncelle",
-                      children: <Widget>[
-                        const Text("Comment"),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            hintText: '...',
-                          ),
-                          controller: _controllerText,
-                          validator: onValidator,
-                        ),
-                      ]),
-                  ElevatedButton(
-                    child: const Text('Close BottomSheet'),
-                    onPressed: () => Navigator.pop(context),
+              height: 350,
+              child: Padding(
+                padding: EdgeInsets.all(ThemeConst.paddings.md),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.max,
+                    children: <Widget>[
+                      Text(
+                          'Yapılacak Maddesi ${row != null ? "Düzenle" : "Ekle"}', style: TextStyle(fontSize: ThemeConst.fontSizes.lg)),
+                      Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
+                      ComponentForm(
+                          formKey: _formKey,
+                          onSubmit: () =>
+                              row != null ? onClickEdit(row) : onClickAdd(),
+                          submitButtonText: row != null ? "Güncelle" : "Ekle",
+                          children: <Widget>[
+                            const Text("Comment"),
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                hintText: '...',
+                              ),
+                              controller: _controllerText,
+                              validator: onValidator,
+                            ),
+                          ]),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          );
+                ),
+              ));
         });
   }
 
@@ -227,14 +256,24 @@ class _PageListDetailState extends State<PageListDetail> {
         ? Container()
         : Column(
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                      child: ComponentButton(
+                    text: "Yeni Ekle",
+                    onPressed: () => onClickAddModal(),
+                    bgColor: ThemeConst.colors.primary,
+                  )),
+                ],
+              ),
+              Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
               ComponentDataTable<ItemGetResultModel>(
                 data: _stateItems,
                 selectedColor: ThemeConst.colors.info,
                 isSearchable: false,
                 columns: const [
-                  ComponentDataColumnModule(
-                    title: "Metin",
-                  ),
+                  ComponentDataColumnModule(title: "Metin", minWidth: 150),
                   ComponentDataColumnModule(
                     title: "Düzenle",
                   ),
@@ -244,11 +283,13 @@ class _PageListDetailState extends State<PageListDetail> {
                 ],
                 cells: [
                   ComponentDataCellModule(
-                    child: (row) => Text(row.itemText),
+                    child: (row) => Container(
+                        constraints: BoxConstraints(minWidth: 150),
+                        child: Text(row.itemText)),
                   ),
                   ComponentDataCellModule(
                     child: (row) => ComponentIconButton(
-                      onPressed: () => onClickEdit(row),
+                      onPressed: () => onClickAddModal(row: row),
                       color: ThemeConst.colors.warning,
                       icon: Icons.edit,
                     ),
@@ -257,7 +298,7 @@ class _PageListDetailState extends State<PageListDetail> {
                     child: (row) => ComponentIconButton(
                       onPressed: () => onClickDelete(row),
                       color: ThemeConst.colors.danger,
-                      icon: Icons.edit,
+                      icon: Icons.delete,
                     ),
                   ),
                 ],

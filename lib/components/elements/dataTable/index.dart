@@ -12,6 +12,7 @@ class ComponentDataTable<T> extends StatefulWidget {
   final List<String>? searchableKeys;
   final bool isTypeClass;
   final Color? selectedColor;
+  final Color? Function(T row)? bgColorRow;
 
   const ComponentDataTable(
       {Key? key,
@@ -22,7 +23,8 @@ class ComponentDataTable<T> extends StatefulWidget {
       this.isSearchable,
       this.searchableKeys,
       this.isTypeClass = true,
-      this.selectedColor})
+      this.selectedColor,
+      this.bgColorRow})
       : super(key: key);
 
   @override
@@ -76,7 +78,7 @@ class _ComponentDataTableState<T> extends State<ComponentDataTable<T>> {
     List<DataColumn> dataColumns = [];
     for (var column in widget.columns) {
       dataColumns.add(DataColumn(
-          label: Text(column.title),
+          label: Container(constraints: BoxConstraints(minWidth: column.minWidth ?? 0), child: Text(column.title)),
           numeric: column.numeric,
           onSort: column.sortable == true
               ? (columnIndex, ascending) {
@@ -165,6 +167,7 @@ class _ComponentDataTableState<T> extends State<ComponentDataTable<T>> {
                 cells: widget.cells,
                 selectedIndex: _stateSelectedIndex,
                 selectedColor: widget.selectedColor,
+                bgColorRow: widget.bgColorRow,
                 onLongPress: onLongPressRow
             ),
             sortColumnIndex: _stateSortColumnIndex,
@@ -184,6 +187,7 @@ class _DataSource<T> extends DataTableSource {
   final int? selectedIndex;
   final Color? selectedColor;
   final void Function(int index)? onLongPress;
+  final Color? Function(T row)? bgColorRow;
 
   _DataSource(
       {required this.context,
@@ -191,7 +195,8 @@ class _DataSource<T> extends DataTableSource {
       required this.cells,
       this.selectedIndex,
       this.selectedColor,
-      this.onLongPress});
+      this.onLongPress,
+      this.bgColorRow});
 
   List<DataCell> _getCells(T row) {
     List<DataCell> dataCells = [];
@@ -219,6 +224,11 @@ class _DataSource<T> extends DataTableSource {
               selectedColor != null) {
             return selectedColor!;
           }
+
+          if(bgColorRow != null){
+            return bgColorRow!(row) ?? Colors.transparent;
+          }
+
           return Colors.transparent;
         }));
   }

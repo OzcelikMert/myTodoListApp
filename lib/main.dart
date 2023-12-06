@@ -6,17 +6,12 @@ import 'package:my_todo_list_app/pages/listDetail.dart';
 import 'package:my_todo_list_app/pages/settings.dart';
 import 'package:my_todo_list_app/pages/home.dart';
 import 'package:my_todo_list_app/pages/list.dart';
-
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-      MultiProvider(
-          providers: [],
-          child: MyApp()
-      )
-  );
+  runApp(MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -31,6 +26,16 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: [
+          const Locale('en', 'US'),
+          const Locale('ru', 'RU'),
+          const Locale('tr', 'TR'),
+        ],
         title: 'My Todo List App',
         theme: ThemeData.dark(),
         initialRoute: "/",

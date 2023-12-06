@@ -4,6 +4,7 @@ class ComponentDataColumnModule  {
   final String? sortKeyName;
   final bool numeric;
   final bool isDate;
+  final double? minWidth;
 
-  const ComponentDataColumnModule({required this.title, this.sortable, this.sortKeyName, this.numeric = false, this.isDate = false});
+  const ComponentDataColumnModule({required this.title, this.sortable, this.sortKeyName, this.minWidth = 0, this.numeric = false, this.isDate = false});
 }

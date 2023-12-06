@@ -33,16 +33,11 @@ class _PageListState extends State<PageList> {
 
   _pageInit() async {
     final pageProviderModel = ProviderLib.get<PageProviderModel>(context);
-
-    await setPageTitle(pageProviderModel);
+    pageProviderModel.setTitle("Yapılacaklar Gün Listesi");
 
     await getDays();
 
     pageProviderModel.setIsLoading(false);
-  }
-
-  Future<void> setPageTitle(PageProviderModel pageProviderModel) async {
-    pageProviderModel.setTitle("Todo Day List");
   }
 
   Future<void> getDays() async {
@@ -91,7 +86,7 @@ class _PageListState extends State<PageList> {
                 ],
                 cells: [
                   ComponentDataCellModule(
-                    child: (row) => Text(DayIdConst.getIdName(row)),
+                    child: (row) => Container(constraints: BoxConstraints(minWidth: 150), child: Text(DayIdConst.getIdText(row))),
                   ),
                   ComponentDataCellModule(
                     child: (row) => ComponentIconButton(

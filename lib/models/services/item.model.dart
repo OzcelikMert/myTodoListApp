@@ -3,7 +3,7 @@ import 'package:my_todo_list_app/config/db/tables/item.dart';
 class ItemGetResultModel {
   final int itemId;
   final int itemDayId;
-  late final String itemText;
+  String itemText;
   final String itemCreatedAt;
   final String itemUpdatedAt;
   final int itemIsDeleted;

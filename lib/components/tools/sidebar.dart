@@ -10,11 +10,12 @@ import 'package:my_todo_list_app/lib/file.lib.dart';
 import 'package:my_todo_list_app/lib/provider.lib.dart';
 import 'package:my_todo_list_app/lib/route.lib.dart';
 import 'package:my_todo_list_app/models/components/elements/dialog/options.model.dart';
+import 'package:my_todo_list_app/models/lib/file.lib.model.dart';
 import 'package:my_todo_list_app/models/providers/page.provider.model.dart';
-import 'package:my_todo_list_app/models/services/language.model.dart';
-import 'package:my_todo_list_app/models/services/word.model.dart';
-import 'package:my_todo_list_app/services/language.service.dart';
-import 'package:my_todo_list_app/services/word.service.dart';
+import 'package:my_todo_list_app/models/services/checkedItem.model.dart';
+import 'package:my_todo_list_app/models/services/item.model.dart';
+import 'package:my_todo_list_app/services/checkedItem.service.dart';
+import 'package:my_todo_list_app/services/item.service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -67,32 +68,15 @@ class _ComponentSideBarState extends State<ComponentSideBar> {
     return returnStatus;
   }
 
-  void onClickReturnHome() async {
-    await DialogLib.show(
-        context, ComponentDialogOptions(icon: ComponentDialogIcon.loading));
-    final languageProviderModel =
-       ProviderLib.get<LanguageProviderModel>(context);
-
-    var result = await LanguageService.update(LanguageUpdateParamModel(
-        whereLanguageId:
-            languageProviderModel.selectedLanguage.languageId,
-        languageIsSelected: 0), context);
-    if (result > 0) {
-      await RouteLib.change(
-          context: context, target: PageConst.routeNames.home);
-    }
-  }
-
   void onClickExport() async {
     if (await checkFilePermission()) {
-      final languageProviderModel =
-         ProviderLib.get<LanguageProviderModel>(context);
-
       DialogLib.show(
           context,
           ComponentDialogOptions(
-              title: "Are you sure?",
-              content: "Are you sure you want to export whole words?",
+              title: "Devam etmek istediğinden emin misin?",
+              content: "Tüm yapılanları ve yapılacak listesini dışarı aktarmak istediğinden emin misin?",
+              confirmButtonText: "Evet",
+              cancelButtonText: "Hayır",
               showCancelButton: true,
               icon: ComponentDialogIcon.confirm,
               onPressed: (bool isConfirm) async {
@@ -100,30 +84,28 @@ class _ComponentSideBarState extends State<ComponentSideBar> {
                   await DialogLib.show(
                       context,
                       ComponentDialogOptions(
-                          content: "Loading...",
+                          content: "Dışa aktarılıyor...",
                           icon: ComponentDialogIcon.loading));
-                  var words = await WordService.get(WordGetParamModel(
-                      wordLanguageId: languageProviderModel
-                          .selectedLanguage.languageId));
+                  var items = await ItemService.get(ItemGetParamModel());
+                  var checkedItems = await CheckedItemService.get(CheckedItemGetParamModel());
                   File? file = await FileLib.exportJsonFile(
-                      fileName:
-                          "LangApp-${languageProviderModel.selectedLanguage.languageName}-${DateFormat("yyyy-MM-dd-HH-mm").format(DateTime.now().toLocal())}",
-                      jsonString: jsonEncode(words));
+                      fileName: "MyTodoListApp-${DateFormat("yyyy-MM-dd-HH-mm").format(DateTime.now().toLocal())}",
+                      jsonString: jsonEncode(ExportJsonFileModel(items: items, checkedItems: checkedItems).toJson()));
                   if (file != null) {
                     DialogLib.show(
                         context,
                         ComponentDialogOptions(
-                          title: "Successfully!",
+                          title: "Başarılı!",
                           content:
-                              "The file has saved successfully. Check your downloads folder.",
+                              "Dosya başarı ile dışarı aktarıldı. Lütfen indirilenler klasörünüzü kontrol ediniz.",
                           icon: ComponentDialogIcon.success,
                         ));
                   } else {
                     DialogLib.show(
                         context,
                         ComponentDialogOptions(
-                            title: "Error!",
-                            content: "It couldn't save.",
+                            title: "Hata!",
+                            content: "Bir sorun oluştu! Lütfen desteğe bildiriniz!",
                             icon: ComponentDialogIcon.error));
                   }
                   return false;
@@ -134,47 +116,43 @@ class _ComponentSideBarState extends State<ComponentSideBar> {
 
   void onClickImport() async {
     var importedDataList = await FileLib.importJsonFile();
-    if (importedDataList != null &&
-        importedDataList is List &&
-        importedDataList.length > 0) {
-      final languageProviderModel =
-         ProviderLib.get<LanguageProviderModel>(context);
-
+    if (importedDataList != null) {
       await DialogLib.show(
           context,
           ComponentDialogOptions(
-              content: "Loading...", icon: ComponentDialogIcon.loading));
+              content: "İçe aktarılıyor...", icon: ComponentDialogIcon.loading));
 
-      List<WordAddParamModel> wordAddParamsList = [];
-      for (var importedData in importedDataList) {
-        wordAddParamsList.add(WordAddParamModel(
-            wordLanguageId: languageProviderModel
-                .selectedLanguage.languageId,
-            wordTextTarget: importedData[DBTableWords.columnTextTarget],
-            wordTextNative: importedData[DBTableWords.columnTextNative],
-            wordComment: importedData[DBTableWords.columnComment],
-            wordStudyType: importedData[DBTableWords.columnStudyType],
-            wordIsStudy: importedData[DBTableWords.columnIsStudy],
-            wordType: importedData[DBTableWords.columnType] ?? WordTypeConst.word
-        ));
+      ImportJsonFileModel importJsonFileModel = ImportJsonFileModel.fromJson(importedDataList);
+      if(importJsonFileModel.items != null){
+        List<ItemAddParamModel> itemAddParams = [];
+        for (var jsonItem in importJsonFileModel.items) {
+          var item = ItemGetResultModel.fromJson(jsonItem);
+          itemAddParams.add(ItemAddParamModel(
+              itemDayId: item.itemDayId,
+              itemText: item.itemText
+          ));
+        }
+        await ItemService.addMulti(itemAddParams);
       }
-      int addWords = await WordService.addMulti(wordAddParamsList);
-      if (addWords > 0) {
-        DialogLib.show(
-            context,
-            ComponentDialogOptions(
-              title: "Successfully!",
-              content: "The file has imported successfully.",
-              icon: ComponentDialogIcon.success,
-            ));
-      } else {
-        DialogLib.show(
-            context,
-            ComponentDialogOptions(
-                title: "Error!",
-                content: "It couldn't import.",
-                icon: ComponentDialogIcon.error));
+
+      if(importJsonFileModel.checkedItems != null){
+        List<CheckedItemAddParamModel> checkedItemAddParams = [];
+        for (var jsonCheckedItem in importJsonFileModel.checkedItems) {
+          var checkedItem = CheckedItemGetResultModel.fromJson(jsonCheckedItem);
+          checkedItemAddParams.add(CheckedItemAddParamModel(
+              checkedItemItemId: checkedItem.checkedItemItemId
+          ));
+        }
+        await CheckedItemService.addMulti(checkedItemAddParams);
       }
+
+      DialogLib.show(
+          context,
+          ComponentDialogOptions(
+            title: "İşlem Başarılı!",
+            content: "Dosya başarı ile içe aktarıldı.",
+            icon: ComponentDialogIcon.success,
+          ));
     }
   }
 
@@ -218,25 +196,15 @@ class _ComponentSideBarState extends State<ComponentSideBar> {
           Container(
             child: ListTile(
               leading: const Icon(Icons.download),
-              title: const Text('Listeyi Dışa Aktar'),
+              title: const Text('Dışa Aktar'),
               onTap: () => onClickExport(),
             ),
           ),
           Container(
             child: ListTile(
               leading: const Icon(Icons.upload),
-              title: const Text('Listeyi İçe Aktar'),
+              title: const Text('İçe Aktar'),
               onTap: () => onClickImport(),
-            ),
-          ),
-          Container(
-            color: getActiveBG(routeName, PageConst.routeNames.settings),
-            child: ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Ayarlar'),
-              onTap: () async {
-                await RouteLib.change(context: context, target: PageConst.routeNames.settings);
-              },
             ),
           ),
         ],

@@ -58,13 +58,13 @@ class FileLib {
     return status;
   }
 
-  static Future<List<Map<String, dynamic>>?> importJsonFile() async {
+  static Future<Map<String, dynamic>?> importJsonFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json'], initialDirectory: (await downloadDirectory).path);
     if(result != null && result.files.isNotEmpty){
       try {
         File file = File(result.files.single.path!);
         String contents = await file.readAsString();
-        dynamic jsonData = jsonDecode(contents).cast<Map<String, dynamic>>();
+        dynamic jsonData = jsonDecode(contents);
         await file.delete();
         return jsonData;
       } catch (e) {

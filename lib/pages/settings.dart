@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:my_todo_list_app/components/elements/dropdown.dart';
+import 'package:flutter/services.dart';
 import 'package:my_todo_list_app/components/elements/form.dart';
-import 'package:my_todo_list_app/components/elements/iconButton.dart';
 import 'package:my_todo_list_app/components/elements/radio.dart';
 import 'package:my_todo_list_app/constants/theme.const.dart';
 import 'package:my_todo_list_app/lib/dialog.lib.dart';
 import 'package:my_todo_list_app/lib/provider.lib.dart';
-import 'package:my_todo_list_app/lib/voices.lib.dart';
 import 'package:my_todo_list_app/models/components/elements/dialog/options.model.dart';
-import 'package:my_todo_list_app/models/dependencies/tts/voice.model.dart';
-import 'package:my_todo_list_app/models/lib/voices.lib.model.dart';
-import 'package:my_todo_list_app/models/providers/language.provider.model.dart';
 import 'package:my_todo_list_app/models/providers/page.provider.model.dart';
-import 'package:my_todo_list_app/models/providers/tts.provider.model.dart';
-import 'package:my_todo_list_app/models/services/language.model.dart';
-import 'package:my_todo_list_app/myLib/variable/array.dart';
-import 'package:my_todo_list_app/services/language.service.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:my_todo_list_app/models/services/settings.model.dart';
+import 'package:my_todo_list_app/services/settings.service.dart';
 
 class PageSettings extends StatefulWidget {
   final BuildContext context;
@@ -28,8 +20,9 @@ class PageSettings extends StatefulWidget {
 }
 
 class _PageSettingsState extends State<PageSettings> {
-  VoicesLibGetVoicesResultModel? _stateSelectedVoice;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late bool _stateServiceIsActive = false;
+  final _controllerServiceInitHours = TextEditingController();
 
   @override
   void initState() {
@@ -41,96 +34,86 @@ class _PageSettingsState extends State<PageSettings> {
 
   _pageInit() async {
     final pageProviderModel = ProviderLib.get<PageProviderModel>(context);
-    pageProviderModel.setTitle("Settings");
-
-    final ttsProviderModel = ProviderLib.get<TTSProviderModel>(context);
-
-    final languageProviderModel =
-        ProviderLib.get<LanguageProviderModel>(context);
-
-    var findVoice = MyLibArray.findSingle(
-        array: ttsProviderModel.voices,
-        key: TTSVoiceKeys.keyName,
-        value: languageProviderModel
-            .selectedLanguage.languageTTSArtist);
-    setState(() {
-      _stateSelectedVoice = findVoice ?? ttsProviderModel.voices[0];
-    });
+    pageProviderModel.setTitle("Ayarlar");
 
     pageProviderModel.setIsLoading(false);
   }
 
-  void onClickTTS() async {
-    if (await Permission.speech.request() != PermissionStatus.granted) {
-      return;
-    }
-    await DialogLib.show(
-        context, ComponentDialogOptions(icon: ComponentDialogIcon.loading));
+  Future<void> getSettings() async {
+    SettingsGetResultModel settings = await SettingsService.get();
 
-    await VoicesLib.setVoiceSaved(context, params: VoicesLibSetVoiceParamModel(
-      locale: _stateSelectedVoice?.locale ?? "",
-      name: _stateSelectedVoice?.name ?? "",
-    ));
-    await (await VoicesLib.flutterTts).speak("Text to speech");
-
-    DialogLib.hide(context);
+    setState(() {
+      _stateServiceIsActive = settings.serviceIsActive;
+      _controllerServiceInitHours.text = settings.serviceInitHour;
+    });
   }
 
   void onClickSave() async {
-    DialogLib.show(
+    await DialogLib.show(
         context,
         ComponentDialogOptions(
-            title: "Are you sure?",
-            content: "Are you sure want to save settings?",
-            icon: ComponentDialogIcon.confirm,
-            showCancelButton: true,
-            onPressed: (bool isConfirm) async {
-              if (isConfirm) {
-                final languageProviderModel =
-                    ProviderLib.get<LanguageProviderModel>(context);
-                await DialogLib.show(
-                    context,
-                    ComponentDialogOptions(
-                        content: "Saving...",
-                        icon: ComponentDialogIcon.loading));
-                var result = await LanguageService.update(
-                    LanguageUpdateParamModel(
-                        whereLanguageId: languageProviderModel
-                            .selectedLanguage.languageId,
-                        languageTTSArtist:
-                            _stateSelectedVoice!.name
-                       ), context);
-                if (result > 0) {
-                  DialogLib.show(
-                      context,
-                      ComponentDialogOptions(
-                          content: "Settings has successfully saved!",
-                          icon: ComponentDialogIcon.success));
-                } else {
-                  DialogLib.show(
-                      context,
-                      ComponentDialogOptions(
-                          content: "It couldn't saved!",
-                          icon: ComponentDialogIcon.error));
-                }
-                return false;
-              }
-            }));
+            content: "Güncelleniyor...", icon: ComponentDialogIcon.loading));
+
+    bool result = await SettingsService.update(SettingsUpdateParamModel(
+      serviceInitHour: _controllerServiceInitHours.text,
+      serviceIsActive: _stateServiceIsActive
+    ));
+
+    if(result){
+      DialogLib.show(
+          context,
+          ComponentDialogOptions(
+              title: "İşlem Başarılı!",
+              content: "Başarı ile güncellendi!",
+              icon: ComponentDialogIcon.success));
+    }else {
+      DialogLib.show(
+          context,
+          ComponentDialogOptions(
+              content: "Bir sorun oluştu! Lütfen desteğe bildiriniz.!",
+              icon: ComponentDialogIcon.error));
+    }
+  }
+
+  void onChangeServiceIsActive(bool? value) {
+    if (value != null) {
+      setState(() {
+        _stateServiceIsActive = value;
+      });
+    }
   }
 
   String? onValidator(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please enter some text';
+      return 'Lütfen boş bırakmayınız!';
     }
     return null;
+  }
+
+  Widget _componentServiceInitHour() {
+    return Column(
+      children: [
+        Padding(padding: EdgeInsets.symmetric(vertical: ThemeConst.paddings.md)),
+        const Text("Language Code"),
+        TextFormField(
+          decoration: const InputDecoration(
+            hintText: 'Saat giriniz (Örn: 04:00)',
+          ),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-2][0-9]:[0-5][0-9]')),
+            LengthLimitingTextInputFormatter(5),
+          ],
+          controller: _controllerServiceInitHours,
+          validator: onValidator,
+        )
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final pageProviderModel =
         ProviderLib.get<PageProviderModel>(context, listen: true);
-    final ttsProviderModel =
-        ProviderLib.get<TTSProviderModel>(context, listen: true);
 
     return pageProviderModel.isLoading
         ? Container()
@@ -138,30 +121,22 @@ class _PageSettingsState extends State<PageSettings> {
             child: ComponentForm(
               formKey: _formKey,
               onSubmit: () => onClickSave(),
-              submitButtonText: "Save",
+              submitButtonText: "Kaydet",
               children: <Widget>[
-                Center(
-                    child: Text("Text To Speech",
-                        style: TextStyle(fontSize: ThemeConst.fontSizes.lg))),
-                Padding(padding: EdgeInsets.all(ThemeConst.paddings.sm)),
-                Center(
-                    child: ComponentIconButton(
-                  onPressed: onClickTTS,
-                  icon: Icons.volume_up,
-                  color: ThemeConst.colors.info,
-                )),
-                Padding(padding: EdgeInsets.all(ThemeConst.paddings.md)),
-                const Text("Language Code"),
-                ComponentDropdown<VoicesLibGetVoicesResultModel>(
-                  selectedItem: _stateSelectedVoice,
-                  items: ttsProviderModel.voices,
-                  itemAsString: (VoicesLibGetVoicesResultModel u) =>
-                      u.displayName,
-                  onChanged: (VoicesLibGetVoicesResultModel? data) => setState(() {
-                    _stateSelectedVoice = data;
-                  }),
-                  hintText: "ex: en-UK",
-                )
+                const Text("Uyarı Mesajı"),
+                ComponentRadio<bool>(
+                  title: "Aktif",
+                  value: true,
+                  groupValue: _stateServiceIsActive,
+                  onChanged: onChangeServiceIsActive,
+                ),
+                ComponentRadio<bool>(
+                  title: 'Kapalı',
+                  value: false,
+                  groupValue: _stateServiceIsActive,
+                  onChanged: onChangeServiceIsActive,
+                ),
+                _stateServiceIsActive ? _componentServiceInitHour() : Container()
               ],
             ),
           );

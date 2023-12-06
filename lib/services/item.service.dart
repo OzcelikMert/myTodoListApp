@@ -43,7 +43,7 @@ class ItemService {
   }
 
   static Future<int> add(ItemAddParamModel params) async {
-    var date = DateTime.now().toUtc().toString();
+    var date = DateTime.now().toUtc().toLocal().toString();
 
     var db = await DBConn.instance.database;
     return await db.insert(DBTableItems.tableName, {
@@ -56,7 +56,7 @@ class ItemService {
   }
 
   static Future<int> addMulti(List<ItemAddParamModel> paramsList) async {
-    var date = DateTime.now().toUtc().toString();
+    var date = DateTime.now().toUtc().toLocal().toString();
 
     var db = await DBConn.instance.database;
     final batch = db.batch();
@@ -75,7 +75,7 @@ class ItemService {
   }
 
   static Future<int> update(ItemUpdateParamModel params) async {
-    var date = DateTime.now().toUtc().toString();
+    var date = DateTime.now().toUtc().toLocal().toString();
 
     Map<String, dynamic> setMap = {
       DBTableItems.columnUpdatedAt: date
@@ -111,7 +111,7 @@ class ItemService {
   }
 
   static Future<int> delete(ItemDeleteParamModel params) async {
-    var date = DateTime.now().toUtc().toString();
+    var date = DateTime.now().toUtc().toLocal().toString();
 
     Map<String, dynamic> setMap = {
       DBTableItems.columnUpdatedAt: date,
