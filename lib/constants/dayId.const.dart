@@ -7,6 +7,7 @@ class DayIdConst {
   static const saturday = 6;
   static const sunday = 7;
   static const all = 8;
+  static const aim = 9;
 
   static getIdText(int id) {
     String name = "";
@@ -19,6 +20,7 @@ class DayIdConst {
       case DayIdConst.saturday: name = "Cumartesi"; break;
       case DayIdConst.sunday: name = "Pazar"; break;
       case DayIdConst.all: name = "Tüm Günler"; break;
+      case DayIdConst.aim: name = "Hedef"; break;
     }
     return name;
   }

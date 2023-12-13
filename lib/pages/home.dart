@@ -123,20 +123,42 @@ class _PageHomeState extends State<PageHome> {
       if (result > 0) {
         CheckedItemGetResultModel item = (await CheckedItemService.get(
             CheckedItemGetParamModel(checkedItemId: result)))[0];
+        if(row.itemDayId == DayIdConst.aim){
+          await ItemService.delete(ItemDeleteParamModel(itemId: row.itemId));
+        }
         setState(() {
           _stateCheckedItems = [item, ..._stateCheckedItems];
+          if(row.itemDayId == DayIdConst.aim){
+            _stateItems = _stateItems.map((item)  {
+              if(item.itemId == row.itemId){
+                item.itemIsDeleted = 1;
+              }
+              return item;
+            }).toList();
+          }
         });
       }
     } else {
       int result = await CheckedItemService.delete(
           CheckedItemDeleteParamModel(checkedItemItemId: row.itemId));
       if (result > 0) {
+        if(row.itemDayId == DayIdConst.aim){
+          await ItemService.update(ItemUpdateParamModel(whereItemId: row.itemId, itemIsDeleted: 0));
+        }
         setState(() {
           _stateCheckedItems = MyLibArray.findMulti(
               array: _stateCheckedItems,
               key: DBTableCheckedItems.columnItemId,
               value: row.itemId,
               isLike: false);
+          if(row.itemDayId == DayIdConst.aim){
+            _stateItems = _stateItems.map((item)  {
+              if(item.itemId == row.itemId){
+                item.itemIsDeleted = 0;
+              }
+              return item;
+            }).toList();
+          }
         });
       }
     }
@@ -148,13 +170,23 @@ class _PageHomeState extends State<PageHome> {
     final pageProviderModel =
         ProviderLib.get<PageProviderModel>(context, listen: true);
 
-    var itemList = _stateIsDateNow ? _stateItems.where((item) => item.itemIsDeleted == 0).toList() : _stateItems.where((item) => MyLibArray.findSingle(
-        array: _stateCheckedItems,
-        key: DBTableCheckedItems.columnItemId,
-        value: item.itemId) !=
-        null).toList();
+    List<ItemGetResultModel> itemList = [];
 
-    itemList = itemList.where((item) => [DayIdConst.all, _stateDate.weekday].contains(item.itemDayId)).toList();
+    if(_stateIsDateNow){
+      itemList = _stateItems.where((item) => item.itemIsDeleted == 0 || (item.itemDayId == DayIdConst.aim && MyLibArray.findSingle(
+          array: _stateCheckedItems,
+          key: DBTableCheckedItems.columnItemId,
+          value: item.itemId) !=
+          null)).toList();
+    }else {
+      itemList = _stateItems.where((item) => MyLibArray.findSingle(
+          array: _stateCheckedItems,
+          key: DBTableCheckedItems.columnItemId,
+          value: item.itemId) !=
+          null).toList();
+    }
+
+    itemList = itemList.where((item) => [DayIdConst.all, DayIdConst.aim, _stateDate.weekday].contains(item.itemDayId)).toList();
 
     return pageProviderModel.isLoading
         ? Container()

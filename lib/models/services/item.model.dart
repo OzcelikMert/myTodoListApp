@@ -6,7 +6,7 @@ class ItemGetResultModel {
   String itemText;
   final String itemCreatedAt;
   final String itemUpdatedAt;
-  final int itemIsDeleted;
+  int itemIsDeleted;
 
   ItemGetResultModel({
     required this.itemId,
@@ -68,11 +68,13 @@ class ItemUpdateParamModel {
   final int whereItemId;
   final int? itemDayId;
   final String? itemText;
+  final int? itemIsDeleted;
 
   ItemUpdateParamModel({
     required this.whereItemId,
     this.itemDayId,
     this.itemText,
+    this.itemIsDeleted
   });
 }
 

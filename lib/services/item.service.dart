@@ -97,6 +97,10 @@ class ItemService {
       setMap[DBTableItems.columnDayId] = params.itemDayId;
     }
 
+    if (params.itemIsDeleted != null) {
+      setMap[DBTableItems.columnIsDeleted] = params.itemIsDeleted;
+    }
+
     var db = await DBConn.instance.database;
     var update = await db.update(
       DBTableItems.tableName,

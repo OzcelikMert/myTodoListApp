@@ -44,6 +44,7 @@ class _PageListState extends State<PageList> {
     setState(() {
       _stateDays = [
         DayIdConst.all,
+        DayIdConst.aim,
         DayIdConst.monday,
         DayIdConst.tuesday,
         DayIdConst.wednesday,
